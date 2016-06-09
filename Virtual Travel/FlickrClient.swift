@@ -7,10 +7,13 @@
 //
 
 import Foundation
+import UIKit
+import CoreData
 
 class FlickrClient {
+    static let stack = (UIApplication.sharedApplication().delegate as! AppDelegate).stack
     
-    static func getPhotosForLocation(latitude: Double, longitude: Double, page: Int = 1, completion: (NSError?) -> ()){
+    static func getPhotosForLocation(latitude: Double, longitude: Double, page: Int = 1, pin: Pin, completion: (NSError?) -> ()){
         let url = FlickrConfig.searchURLWithLocation(latitude: latitude, longitude: longitude, page: page)
         let request = NSMutableURLRequest(URL: NSURL(string: url)!)
         let session = NSURLSession.sharedSession()
@@ -27,12 +30,23 @@ class FlickrClient {
             
             let json = self.parseDataToJSON(data)
             
-            guard json != nil else {
+            guard let photoDict = json else {
                 completion(NSError(domain: "FlickrClient", code: 400, userInfo: nil))
                 return
             }
             
-            //TODO: Create CoreData class for photos and save to conext
+            stack.performBackgroundBatchOperation { (batch) in
+                for photo in (photoDict["photos"]!["photo"] as! [[String: AnyObject]]) {
+                    let url = FlickrConfig.imageURL(photo["farm"] as! Int, server_id: photo["server"] as! String, photo_id: photo["id"] as! String, secret: photo["secret"] as! String)
+                    let params = ["url": url, "pin": pin]
+                    let newPhoto = Photo(dictionary: params, context: batch)
+                    let pinFetch = NSFetchRequest(entityName: "Pin")
+                    pinFetch.predicate = NSPredicate(format: "SELF = %@", argumentArray: [pin])
+                    let contextPin = try! batch.executeFetchRequest(pinFetch) as! [Pin]
+                    newPhoto.pin = contextPin.first!
+                }
+                
+            }
             
         }
         
@@ -40,7 +54,7 @@ class FlickrClient {
     }
     
     static func downloadPhotoDataForPhoto(photo: Photo, completion: (NSError?) -> ()) {
-        let url = photo.url
+        let url = photo.url!
         
         let request = NSMutableURLRequest(URL: NSURL(string: url)!)
         let session = NSURLSession.sharedSession()
@@ -55,14 +69,18 @@ class FlickrClient {
                 return
             }
             
-            let json = self.parseDataToJSON(data)
-            
-            guard json != nil else {
-                completion(NSError(domain: "FlickrClient", code: 400, userInfo: nil))
-                return
+//            let json = self.parseDataToJSON(data)
+//            
+//            guard json != nil else {
+//                completion(NSError(domain: "FlickrClient", code: 400, userInfo: nil))
+//                return
+//            }
+            stack.performBackgroundBatchOperation{ (batch) in
+                let photoFetch = NSFetchRequest(entityName: "Photo")
+                photoFetch.predicate = NSPredicate(format: "SELF = %@", argumentArray: [photo])
+                let contextPhoto = try! batch.executeFetchRequest(photoFetch) as! [Photo]
+                contextPhoto.first!.image = data
             }
-            
-            //TODO: save core data image for photo and save to conext
         }
         
         task.resume()

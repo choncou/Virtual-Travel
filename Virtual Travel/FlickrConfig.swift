@@ -19,11 +19,12 @@ class FlickrConfig {
                       "lon": long,
                       "per_page": 21,
                       "page": page,
-                      "format": "json"]
+                      "format": "json",
+                      "nojsoncallback": 1]
         return "\(BaseSearchURL)\(escapedParameters(params))"
     }
     
-    static func imageURL(farm_id: Int, server_id: Int, photo_id: Int, secret: String) -> String {
+    static func imageURL(farm_id: Int, server_id: String, photo_id: String, secret: String) -> String {
         let url = "https://farm\(farm_id).staticflickr.com/\(server_id)/\(photo_id)_\(secret)_m.jpg"
         
         return url
