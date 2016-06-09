@@ -12,6 +12,7 @@ import CoreData
 
 class TravelLocationsMapViewController: UIViewController {
 
+    //Variable to know whether the controller is in delete mode
     var isDeleting: Bool = false
     var longPressRecogniser: UILongPressGestureRecognizer!
     let stack = (UIApplication.sharedApplication().delegate as! AppDelegate).stack
@@ -86,6 +87,9 @@ class TravelLocationsMapViewController: UIViewController {
         return fetchedResultsController
     } ()
     
+    /**
+     Fill th map with pins
+     */
     func getAllPins() {
         for pin in fetchedResultsController.fetchedObjects as! [Pin] {
             let annotation = MKPointAnnotation()
